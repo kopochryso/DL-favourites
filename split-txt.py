@@ -3,8 +3,8 @@ import random
 import shutil
 
 # Input directories containing all images and labels
-images_dir = r"C:\Users\chryk\Downloads\InnoPP\resized\CROPPED"
-labels_dir = r"C:\Users\chryk\Downloads\InnoPP\resized\CROPPED"
+images_dir = r"C:\Users\..."
+labels_dir = r"C:\Users\..."
 
 # Output directories for split datasets
 output_dirs = {
