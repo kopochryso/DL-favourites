@@ -4,9 +4,9 @@ import random
 from pathlib import Path
 
 # Config
-image_dir = r'C:\Users\chryk\Downloads\InnoPP\resized\MPOULO\backup-fullsize\640\IMGS-640'
-annotation_dir = r'C:\Users\chryk\Downloads\InnoPP\resized\MPOULO\backup-fullsize\640\xmls'  # Set to None if not using annotations
-output_base = r'C:\Users\chryk\Downloads\InnoPP\resized\MPOULO\backup-fullsize\fasterrcnn-pytorch-training-pipeline-1\data\data640'
+image_dir = r'C:\Users\...\IMGS-640'
+annotation_dir = r'C:\Users\...\xmls'  # Set to None if not using annotations
+output_base = r'C:\Users\...\data640'
 split_ratio = {
     'train': 0.7,
     'val': 0.1,
