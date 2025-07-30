@@ -127,3 +127,8 @@ if __name__ == "__main__":
 
     if args.csv:
         write_csv(results)
+
+
+
+
+#command for running example: python C:\Users\...full-path\models\comp-cost.py C:\Users\...\wandb --csv
