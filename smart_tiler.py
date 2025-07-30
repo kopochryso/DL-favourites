@@ -4,10 +4,10 @@ import numpy as np
 from PIL import Image
 
 # === CONFIGURATION ===
-IMG_DIR = r'C:\Users\chryk\Downloads\InnoPP\resized\MPOULO\backup-fullsize\tilling\imgs'  # Input image directory
-LABEL_DIR = r'C:\Users\chryk\Downloads\InnoPP\resized\MPOULO\backup-fullsize\tilling\imgs'  # YOLO-style .txt label directory
-OUTPUT_IMG_DIR = r'C:\Users\chryk\Downloads\InnoPP\resized\MPOULO\backup-fullsize\640'
-OUTPUT_LABEL_DIR = r'C:\Users\chryk\Downloads\InnoPP\resized\MPOULO\backup-fullsize\640'
+IMG_DIR = r'C:\Users\...'  # Input image directory
+LABEL_DIR = r'C:\Users\...'  # YOLO-style .txt label directory
+OUTPUT_IMG_DIR = r'C:\Users\...'
+OUTPUT_LABEL_DIR = r'C:\Users\...'
 
 CROP_SIZE = 640
 OVERLAP = 0.5  # 50% overlap
