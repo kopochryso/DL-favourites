@@ -14,8 +14,8 @@ CLASS_MAPPING_COCO = {i+1: name for i, name in CLASS_MAPPING.items()}
 CLASS_MAPPING_COCO[0] = "Background"  # Add background as class 0
 
 # Paths
-YOLO_LABELS_DIR = r"C:\Users\chryk\Downloads\InnoPP\resized\split\train\labels"  # Folder containing .txt labels
-IMAGE_DIR = r"C:\Users\chryk\Downloads\InnoPP\resized\split\train\images"  # Folder containing images
+YOLO_LABELS_DIR = r"C:\Users\...\labels"  # Folder containing .txt labels
+IMAGE_DIR = r"C:\Users\...\images"  # Folder containing images
 OUTPUT_JSON = "converted_coco-test.json"  # Output COCO JSON
 
 # Initialize COCO dictionary
