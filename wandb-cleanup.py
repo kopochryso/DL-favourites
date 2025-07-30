@@ -1,7 +1,7 @@
 import os
 import json
 
-WANDB_DIR = r"C:\Users\chryk\Downloads\InnoPP\resized\MPOULO\backup-fullsize\fasterrcnn-pytorch-training-pipeline-1\wandb"
+WANDB_DIR = r"C:\Users\...\wandb"
 
 def extract_project_dir(run_path):
     metadata_path = os.path.join(run_path, "files", "wandb-metadata.json")
