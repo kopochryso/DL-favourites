@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
 
 # Path to the directory containing your XML annotation files
-xml_directory = r'C:\Users\chryk\Downloads\InnoPP\resized\MPOULO\backup-fullsize\NEA'
+xml_directory = r'...'
 
 # Function to parse XML and extract bounding box aspect ratios
 def extract_aspect_ratios(xml_directory):
