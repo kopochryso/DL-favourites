@@ -1,30 +1,11 @@
 import os
 import json
 import csv
-from tabulate import tabulate
+from datetime import datetime
 
-# Config
-COST_PER_KWH = 0.15  # $ per kilowatt-hour
-
-# Realistic epoch durations (minutes) and power draw per GPU
-GPU_PROFILES = {
-    "nvidia rtx 4050": {
-        "power_watts": 80,
-        "epoch_times": {
-            "mobilenet": 0.12,
-            "resnet": 0.23,
-            "efficientnet": 0.14
-        }
-    },
-    "nvidia 3080 ti": {
-        "power_watts": 250,
-        "epoch_times": {
-            "mobilenet": 0.09,
-            "resnet": 0.53,
-            "efficientnet": 0.37
-        }
-    }
-}
+# CONFIGURABLE VALUES
+POWER_WATTS = 70  # Typical GPU power draw during training (Watts)
+COST_PER_KWH = 0.15  # Electricity cost in $ per kWh
 
 def parse_args(args_list):
     args_dict = {}
@@ -41,35 +22,29 @@ def parse_args(args_list):
                 args_dict[key] = value
             except StopIteration:
                 args_dict[key] = True
+        elif arg.startswith("-"):
+            key = arg.lstrip("-")
+            try:
+                value = next(it)
+                args_dict[key] = value
+            except StopIteration:
+                args_dict[key] = True
     return args_dict
 
-def identify_model_type(model_name):
+def get_model_profile(model_name):
     model_name = model_name.lower()
-    if "mobilenet" in model_name:
-        return "mobilenet"
-    elif "resnet" in model_name:
-        return "resnet"
+    if "resnet" in model_name:
+        return {"epoch_time_hr": 0.45}
+    elif "mobilenet" in model_name:
+        return {"epoch_time_hr": 0.30}
     elif "efficientnet" in model_name:
-        return "efficientnet"
+        return {"epoch_time_hr": 0.40}
     else:
-        return "unknown"
+        return {"epoch_time_hr": 0.40}  # fallback
 
-def estimate_cost(gpu_name, model_type, epochs):
-    profile = GPU_PROFILES.get(gpu_name.lower())
-    if not profile or model_type not in profile["epoch_times"]:
-        return None  # Unknown GPU or model
-
-    epoch_time_min = profile["epoch_times"][model_type]
-    total_time_hr = (epoch_time_min * epochs) / 60
-    energy_kwh = (profile["power_watts"] * total_time_hr) / 1000
-    cost = energy_kwh * COST_PER_KWH
-
-    return {
-        "Est. Hours": round(total_time_hr, 2),
-        "Est. Energy (kWh)": round(energy_kwh, 2),
-        "Est. Cost ($)": round(cost, 2),
-        "Power (W)": profile["power_watts"]
-    }
+def estimate_hours(model, epochs):
+    profile = get_model_profile(model)
+    return epochs * profile["epoch_time_hr"]
 
 def scan_and_summarize(root_dir):
     summary = []
@@ -86,77 +61,74 @@ def scan_and_summarize(root_dir):
                         continue
 
                     args = parse_args(meta.get("args", []))
-                    name = args.get("name") or os.path.basename(dirpath)
+                    name = args.get("name") or args.get("--name") or os.path.basename(dirpath)
                     epochs = int(args.get("e", 0))
                     batch_size = int(args.get("b", 0))
                     img_size = args.get("ims", "unknown")
-                    model_name = meta.get("args", [])[1] if len(meta.get("args", [])) > 1 else "unknown"
+                    model = meta.get("args", [])[1] if len(meta.get("args", [])) > 1 else "unknown"
                     gpu_name = meta.get("gpu", "unknown")
 
-                    model_type = identify_model_type(model_name)
-                    cost_data = estimate_cost(gpu_name, model_type, epochs)
+                    if "efficientnet" in model.lower():
+                        continue  # Skip ongoing training runs
 
-                    if not cost_data:
-                        print(f"⚠️ Skipping unknown model/GPU: {model_name} / {gpu_name}")
-                        continue
+                    est_hours = estimate_hours(model, epochs)
+                    energy_kwh = (POWER_WATTS * est_hours) / 1000
+                    cost = energy_kwh * COST_PER_KWH
 
                     summary.append({
-                        "Run Name": name,
-                        "Model": model_name,
+                        "Name": name,
+                        "Model": model,
                         "Epochs": epochs,
+                        "Batch Size": batch_size,
+                        "Image Size": img_size,
                         "GPU": gpu_name,
-                        "Power (W)": cost_data["Power (W)"],
-                        "Est. Hours": cost_data["Est. Hours"],
-                        "Est. Energy (kWh)": cost_data["Est. Energy (kWh)"],
-                        "Est. Cost ($)": cost_data["Est. Cost ($)"]
+                        "Est. Hours": round(est_hours, 2),
+                        "Est. Energy (kWh)": round(energy_kwh, 2),
+                        "Est. Cost ($)": round(cost, 2)
                     })
 
     return summary
 
-def print_summary(summary):
+def write_csv(summary, output_path="training_cost_summary.csv"):
     if not summary:
-        print("No valid runs found.")
-        return
-
-    print("\n🧾 Training Cost Summary:")
-    print(tabulate(summary, headers="keys", tablefmt="fancy_grid"))
-
-    # Totals per GPU
-    from collections import defaultdict
-    totals = defaultdict(lambda: {"hours": 0, "energy": 0, "cost": 0})
-
-    for row in summary:
-        gpu = row["GPU"].lower()
-        totals[gpu]["hours"] += row["Est. Hours"]
-        totals[gpu]["energy"] += row["Est. Energy (kWh)"]
-        totals[gpu]["cost"] += row["Est. Cost ($)"]
-
-    print("\n💻 Totals by GPU:")
-    for gpu, data in totals.items():
-        print(f"\n🔹 GPU: {gpu}")
-        print(f"   Total Time:   {data['hours']:.2f} hrs")
-        print(f"   Total Energy: {data['energy']:.2f} kWh")
-        print(f"   Total Cost:   ${data['cost']:.2f}")
-
-def write_csv(summary, path="comp_cost_summary.csv"):
-    if not summary:
+        print("No data to write.")
         return
     keys = summary[0].keys()
-    with open(path, "w", newline="") as f:
+    with open(output_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=keys)
         writer.writeheader()
         writer.writerows(summary)
-    print(f"\n📁 CSV saved to {path}")
+    print(f"\n✅ CSV written to: {output_path}")
+
+def print_summary_table(summary):
+    from tabulate import tabulate
+
+    print("\n🧾 Summary:")
+    print(tabulate(summary, headers="keys", tablefmt="fancy_grid"))
+
+    total_hours = sum(row["Est. Hours"] for row in summary)
+    total_energy = sum(row["Est. Energy (kWh)"] for row in summary)
+    total_cost = sum(row["Est. Cost ($)"] for row in summary)
+
+    print("\n💡 Totals:")
+    print(f"Total GPU Time:    {total_hours:.2f} hours")
+    print(f"Total Energy Use:  {total_energy:.2f} kWh")
+    print(f"Estimated Cost:    ${total_cost:.2f}")
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="Compute training cost per GPU")
-    parser.add_argument("root_dir", help="Directory containing wandb runs")
-    parser.add_argument("--csv", action="store_true", help="Write CSV output")
+    parser = argparse.ArgumentParser(description="Estimate compute cost from wandb-metadata.json files.")
+    parser.add_argument("root_dir", help="Root folder to scan for wandb-metadata.json files")
+    parser.add_argument("--csv", help="Write CSV output", action="store_true")
     args = parser.parse_args()
 
     results = scan_and_summarize(args.root_dir)
-    print_summary(results)
+    print_summary_table(results)
 
     if args.csv:
         write_csv(results)
+
+
+
+
+#command for running example: python C:\Users\...full-path\models\comp-cost.py C:\Users\...\wandb --csv
