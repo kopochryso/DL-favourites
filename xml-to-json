@@ -1,0 +1,89 @@
+import os
+import json
+import xml.etree.ElementTree as ET
+from PIL import Image
+from tqdm import tqdm
+
+# Paths
+xml_dir = "path/to/Annotations"   # Folder containing XMLs
+img_dir = "path/to/Images"        # Folder containing JPG/PNG images
+output_json = "annotations.json"
+
+# Map your class names to IDs
+# Example: {'weed_class_name': id, ...}
+class_name_to_id = {
+    "AMARE": 1,
+    "CHEAL": 2,
+    "CYPES": 3,
+    "POROL": 4
+}
+
+# COCO JSON structure
+coco = {
+    "images": [],
+    "annotations": [],
+    "categories": []
+}
+
+# Add categories
+for name, id in class_name_to_id.items():
+    coco["categories"].append({"id": id, "name": name})
+
+ann_id = 1  # annotation id counter
+
+# Loop through XML files
+for xml_file in tqdm(os.listdir(xml_dir), desc="Converting XML to JSON"):
+    if not xml_file.endswith(".xml"):
+        continue
+
+    tree = ET.parse(os.path.join(xml_dir, xml_file))
+    root = tree.getroot()
+
+    filename = root.find("filename").text
+    img_path = os.path.join(img_dir, filename)
+
+    # Get image dimensions
+    with Image.open(img_path) as img:
+        width, height = img.size
+
+    # Add image entry
+    img_id = len(coco["images"]) + 1
+    coco["images"].append({
+        "id": img_id,
+        "file_name": filename,
+        "width": width,
+        "height": height
+    })
+
+    # Loop over objects in XML
+    for obj in root.findall("object"):
+        label = obj.find("name").text
+        if label not in class_name_to_id:
+            continue
+
+        class_id = class_name_to_id[label]
+        bndbox = obj.find("bndbox")
+        xmin = float(bndbox.find("xmin").text)
+        ymin = float(bndbox.find("ymin").text)
+        xmax = float(bndbox.find("xmax").text)
+        ymax = float(bndbox.find("ymax").text)
+
+        # COCO bbox format: [x, y, width, height]
+        bbox_width = xmax - xmin
+        bbox_height = ymax - ymin
+
+        coco["annotations"].append({
+            "id": ann_id,
+            "image_id": img_id,
+            "category_id": class_id,
+            "bbox": [xmin, ymin, bbox_width, bbox_height],
+            "area": bbox_width * bbox_height,
+            "iscrowd": 0
+        })
+        ann_id += 1
+
+# Save JSON
+with open(output_json, "w") as f:
+    json.dump(coco, f, indent=4)
+
+print(f"✅ Conversion complete! Saved to {output_json}")
