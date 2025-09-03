@@ -1,0 +1,43 @@
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 1. Load RGB image
+img = cv2.imread(r"C:\Users\chryk\Downloads\InnoPP\20240524_120532.jpg")  # replace with your image
+img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+# 2. Compute Excess Green Index (ExG)
+R = img_rgb[:, :, 0].astype(float)
+G = img_rgb[:, :, 1].astype(float)
+B = img_rgb[:, :, 2].astype(float)
+ExG = 2 * G - R - B
+
+# Normalize ExG for visualization
+ExG_norm = cv2.normalize(ExG, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
+# 3. Threshold ExG to segment vegetation
+_, mask = cv2.threshold(ExG_norm, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+# 4. Create weed map (blue where vegetation is detected)
+weed_map = np.zeros_like(img_rgb)
+weed_map[mask > 0] = [0, 0, 255]  # blue for weeds
+
+# 5. Display results
+fig, axs = plt.subplots(1, 4, figsize=(15,5))
+axs[0].imshow(img_rgb)
+axs[0].set_title("Original RGB")
+axs[0].axis("off")
+
+axs[1].imshow(ExG_norm, cmap='gray')
+axs[1].set_title("ExG Index")
+axs[1].axis("off")
+
+axs[2].imshow(mask, cmap='gray')
+axs[2].set_title("Vegetation Mask")
+axs[2].axis("off")
+
+axs[3].imshow(weed_map)
+axs[3].set_title("Weed Map (Blue)")
+axs[3].axis("off")
+
+plt.show()
