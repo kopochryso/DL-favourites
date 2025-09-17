@@ -1,0 +1,103 @@
+import cv2
+import numpy as np
+from pathlib import Path
+import xml.etree.ElementTree as ET
+import os
+import shutil
+
+# ===== CONFIG =====
+input_img_dir = r"C:\Users\chryk\Downloads\InnoPP\resized\test"
+input_xml_dir = r"C:\Users\chryk\Downloads\InnoPP\resized\test"
+output_img_dir = r"C:\Users\chryk\Downloads\InnoPP\resized\test\pad"
+output_xml_dir = r"C:\Users\chryk\Downloads\InnoPP\resized\test\pad"
+target_size = 1024  # or 2048
+pad_value = 0       # black padding
+
+os.makedirs(output_img_dir, exist_ok=True)
+os.makedirs(output_xml_dir, exist_ok=True)
+
+# ===== FUNCTION TO PAD + RESIZE IMAGE AND BOXES =====
+def pad_and_resize_image_and_boxes(img, boxes, target_size=1024, pad_value=0):
+    h, w = img.shape[:2]
+    max_side = max(h, w)
+    
+    # pad image to square
+    padded_img = np.full((max_side, max_side, 3), pad_value, dtype=img.dtype)
+    padded_img[0:h, 0:w] = img
+
+    # calculate scale
+    scale = target_size / max_side
+
+    # resize image
+    resized_img = cv2.resize(padded_img, (target_size, target_size), interpolation=cv2.INTER_LINEAR)
+
+    # adjust boxes
+    new_boxes = []
+    for (xmin, ymin, xmax, ymax) in boxes:
+        new_boxes.append([
+            int(xmin * scale),
+            int(ymin * scale),
+            int(xmax * scale),
+            int(ymax * scale)
+        ])
+    return resized_img, new_boxes
+
+# ===== FUNCTION TO PARSE XML BOXES =====
+def parse_xml_boxes(xml_file):
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
+    boxes = []
+    labels = []
+    for obj in root.findall("object"):
+        name = obj.find("name").text
+        b = obj.find("bndbox")
+        xmin = int(b.find("xmin").text)
+        ymin = int(b.find("ymin").text)
+        xmax = int(b.find("xmax").text)
+        ymax = int(b.find("ymax").text)
+        boxes.append([xmin, ymin, xmax, ymax])
+        labels.append(name)
+    return boxes, labels, tree
+
+# ===== FUNCTION TO UPDATE XML BOXES =====
+def update_xml_boxes(tree, new_boxes):
+    root = tree.getroot()
+    for obj, box in zip(root.findall("object"), new_boxes):
+        b = obj.find("bndbox")
+        b.find("xmin").text = str(box[0])
+        b.find("ymin").text = str(box[1])
+        b.find("xmax").text = str(box[2])
+        b.find("ymax").text = str(box[3])
+    return tree
+
+# ===== PROCESS ALL IMAGES + XML =====
+img_paths = list(Path(input_img_dir).glob("*.jpg")) + list(Path(input_img_dir).glob("*.jpeg")) + list(Path(input_img_dir).glob("*.png"))
+
+print(f"Processing {len(img_paths)} images...")
+
+for img_path in img_paths:
+    xml_path = Path(input_xml_dir) / (img_path.stem + ".xml")
+    if not xml_path.exists():
+        print(f"No XML for {img_path.name}, skipping.")
+        continue
+
+    # read image
+    img = cv2.imread(str(img_path))
+    if img is None:
+        print(f"Failed to read {img_path.name}, skipping.")
+        continue
+
+    # parse XML
+    boxes, labels, tree = parse_xml_boxes(xml_path)
+
+    # pad + resize
+    new_img, new_boxes = pad_and_resize_image_and_boxes(img, boxes, target_size=target_size, pad_value=pad_value)
+
+    # update XML
+    new_tree = update_xml_boxes(tree, new_boxes)
+
+    # save outputs
+    cv2.imwrite(str(Path(output_img_dir) / img_path.name), new_img)
+    new_tree.write(str(Path(output_xml_dir) / xml_path.name))
+
+print("Done! Images and XML labels padded/resized successfully.")
