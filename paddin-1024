@@ -6,10 +6,10 @@ import os
 import shutil
 
 # ===== CONFIG =====
-input_img_dir = r"C:\Users\chryk\Downloads\InnoPP\resized\test"
-input_xml_dir = r"C:\Users\chryk\Downloads\InnoPP\resized\test"
-output_img_dir = r"C:\Users\chryk\Downloads\InnoPP\resized\test\pad"
-output_xml_dir = r"C:\Users\chryk\Downloads\InnoPP\resized\test\pad"
+input_img_dir = r"C:\Users\..." #place image dir
+input_xml_dir = r"C:\Users\..." #place xml annotations !!!! XML NOT TXT
+output_img_dir = r"C:\Users\..." 
+output_xml_dir = r"C:\Users\..."
 target_size = 1024  # or 2048
 pad_value = 0       # black padding
 
