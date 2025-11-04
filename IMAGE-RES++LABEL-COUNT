@@ -1,0 +1,98 @@
+import argparse
+import os
+from pathlib import Path
+from collections import Counter
+from typing import Optional
+from PIL import Image  # pip install pillow
+
+IMG_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
+
+
+def find_label_path(img_path: Path, labels_dir: Optional[Path]):
+    """
+    Given an image path, return the expected YOLO label .txt path.
+    If labels_dir is provided, map image/path.jpg -> labels/path.txt
+    Otherwise, look for path.txt next to the image.
+    """
+    stem = img_path.stem
+    if labels_dir:
+        return labels_dir / f"{stem}.txt"
+    return img_path.with_suffix(".txt")
+
+
+def parse_label_file(label_path: Path):
+    """Parse YOLO txt labels, return list of class IDs."""
+    classes = []
+    try:
+        with open(label_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                cls_id = int(float(line.split()[0]))
+                classes.append(cls_id)
+    except FileNotFoundError:
+        pass
+    return classes
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--images", required=True, help="Path to images folder")
+    ap.add_argument("--labels", help="Path to labels folder (optional)")
+    ap.add_argument("--class_id", type=int, default=0, help="class id to count")
+    args = ap.parse_args()
+
+    images_dir = Path(args.images)
+    labels_dir = Path(args.labels) if args.labels else None
+
+    if not images_dir.exists():
+        raise SystemExit(f"Images folder not found: {images_dir}")
+    if labels_dir and not labels_dir.exists():
+        raise SystemExit(f"Labels folder not found: {labels_dir}")
+
+    img_files = [p for p in images_dir.rglob("*") if p.suffix.lower() in IMG_EXTS]
+    if not img_files:
+        raise SystemExit("⚠️ No images found.")
+
+    res_counter = Counter()
+    class_counter = Counter()
+    total_boxes = 0
+    missing_labels = []
+
+    for img_path in img_files:
+        # Track resolution
+        try:
+            w, h = Image.open(img_path).size
+            res_counter[(w, h)] += 1
+        except Exception as e:
+            print(f"[WARN] Couldn't read image: {img_path} ({e})")
+
+        # Check labels
+        label_path = find_label_path(img_path, labels_dir)
+        if label_path.exists():
+            classes = parse_label_file(label_path)
+            for c in classes:
+                class_counter[c] += 1
+            total_boxes += len(classes)
+        else:
+            missing_labels.append(img_path)
+
+    print("\n=== IMAGE RESOLUTION COUNTS ===")
+    for (w, h), count in sorted(res_counter.items(), key=lambda x: (-x[1], x[0][0])):
+        print(f"{w}x{h}  : {count}")
+
+    print("\n=== LABEL COUNT (by class id) ===")
+    for cls, count in sorted(class_counter.items()):
+        print(f"class {cls}: {count}")
+
+    print(f"\nTotal boxes: {total_boxes}")
+    print(f"Class {args.class_id} boxes: {class_counter.get(args.class_id, 0)}")
+
+    print(f"\nImages without labels: {len(missing_labels)}")
+    # Uncomment if you want to see them printed
+    # for img in missing_labels:
+    #     print(img)
+
+
+if __name__ == "__main__":
+    main()
