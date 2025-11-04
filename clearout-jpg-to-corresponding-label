@@ -1,0 +1,25 @@
+import os
+from pathlib import Path
+
+# EDIT THIS ⇩ folder where your dataset is
+DATASET_DIR = Path(r"C:\Users\chryk\Downloads\InnoPP\sunRISE\train\images")  # <-- change this
+
+image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
+
+deleted = 0
+kept = 0
+
+for img_path in DATASET_DIR.rglob("*"):
+    if img_path.suffix.lower() in image_extensions:
+        label_path = img_path.with_suffix(".txt")
+
+        if not label_path.exists():  # label does NOT exist → delete image
+            print(f"❌ No label found → deleting: {img_path.name}")
+            img_path.unlink()  # delete the file
+            deleted += 1
+        else:
+            kept += 1
+
+print("\n✅ Done.")
+print(f"Images kept:   {kept}")
+print(f"Images deleted: {deleted}")
