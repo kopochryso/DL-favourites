@@ -10,12 +10,12 @@ img_dir = "path/to/Images"        # Folder containing JPG/PNG images
 output_json = "annotations.json"
 
 # Map your class names to IDs
-# Example: {'weed_class_name': id, ...}
+# Example: {'class_name_n': id, ...} - current example is for 4 classes
 class_name_to_id = {
-    "AMARE": 1,
-    "CHEAL": 2,
-    "CYPES": 3,
-    "POROL": 4
+    "CLASS_NAME_1": 1,
+    "CLASS_NAME_2": 2,
+    "CLASS_NAME_3": 3,
+    "CLASS_NAME_4": 4
 }
 
 # COCO JSON structure

@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # 1. Load RGB image
-img = cv2.imread(r"C:\Users\chryk\Downloads\InnoPP\20240524_120532.jpg")  # replace with your image
+img = cv2.imread(r"C:\...\image.jpg")  # replace with your image
 img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 # 2. Compute Excess Green Index (ExG)

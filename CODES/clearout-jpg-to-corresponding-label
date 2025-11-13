@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 # EDIT THIS ⇩ folder where your dataset is
-DATASET_DIR = Path(r"C:\Users\chryk\Downloads\InnoPP\sunRISE\train\images")  # <-- change this
+DATASET_DIR = Path(r"C:\...\images")  # <-- change this
 
 image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 
